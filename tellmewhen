@@ -1,11 +1,48 @@
 #!/usr/bin/env ruby
 
+require 'rubygems'
+require 'yaml'
+
 class TellMeWhen
-  def self.main args
-    app = self.new
-    exit app.run args
+  RC_FILE = "#{ENV['HOME']}/.tellmewhenrc"
+
+  def initialize
   end
 
+  def load_settings
+    @settings ||= {
+      'notify-via' => 'email',
+      'email' => {
+         'to'   => "#{ENV['LOGNAME']}@#{`hostname`.chomp}",
+         'from' => "#{ENV['LOGNAME']}@#{`hostname`.chomp}",
+      }
+    }
+
+    if File.exist? RC_FILE
+      settings = YAML.load_file RC_FILE
+      @settings = @settings.merge(settings)
+      puts "Loaded Settings: #{@settings.inspect}"
+    end
+  end
+
+  def save_settings
+    if ! File.exist? RC_FILE
+      File.open(RC_FILE, "w") do |f|
+        f.write @settings.to_yaml
+      end
+    end
+  end
+
+  def parse_options
+  end
+
+  def self.main args
+    app = self.new
+    app.parse_options
+    app.load_settings
+    app.save_settings
+    exit app.run args
+  end
 
   def run args
     puts "Use optparse"
