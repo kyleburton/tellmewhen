@@ -282,7 +282,34 @@ TellMeWhen
   end
 
   def wait_on_file_modified args
-    raise "Implement wait on file modified"
+    trigger_file = @options[:trigger_file]
+    initial_mtime = File.mtime trigger_file
+
+    while initial_mtime == File.mtime(trigger_file)
+      sleep 0.250
+      if elapsed_time > wait_timeout
+        puts "Exceeded timeout #{wait_timeout}, sending 'pending' notificaiton"
+        send_email_notification "When! [NOT] still awaiting #{@options[:trigger_file]} to change", <<-END
+
+I started watching for #{@options[:trigger_file]} to be updated on #{hostname} at #{@start_time.to_s} (#{@start_time.to_i}), I've been watching for it #{elapsed_time} seconds so far.
+
+Awaiting it's update,
+
+TellMeWhen
+        END
+      end
+    end
+
+    @end_time = Time.now
+
+    send_email_notification "When! #{@options[:trigger_file]} was updated.", <<-END
+
+I started watching for #{@options[:trigger_file]} to be updated on #{hostname} at #{@start_time.to_s} (#{@start_time.to_i}), and now, after #{elapsed_time} seconds it has finally been modified as of #{@end_time.to_s} (#{@end_time.to_i})
+
+POSIX is my zen,
+
+TellMeWhen
+        END
   end
 
   def smtp_host
