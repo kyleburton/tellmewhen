@@ -2,6 +2,16 @@ h1. tellmewhen
 
 Tell me when another program has finshed.  Show me when it started, when it finished and how long it took.  Show me the output and if it errored.
 
+I created this utility because I had long running database scripts that I wanted a completion notification for - including a summary of the time and exit code.  I had done this various ways in the past by using bash and other shell utilities.  This program captures all of the features and behavior I wanted without having to script it from scratch again every time I needed it.
+
+* YML Based Configuration in an rc file
+* easy default configuration
+* sends email
+* includes start/stop/elapsed timing
+* success/fail based on exit code
+* watch an already running process (by pid, by grep pattern over 'ps aux')
+* release as a gem so it's easy to use/install
+
 h1. Configuration
 
 @$HOME/.tellmewhen.yml@
