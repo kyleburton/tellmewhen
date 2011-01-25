@@ -255,7 +255,30 @@ TellMeWhen
   end
 
   def wait_on_file_exists args
-    raise "Implement wait on file exists"
+    while !File.exist? @options[:trigger_file]
+      sleep 0.250
+      if elapsed_time > wait_timeout
+        puts "Exceeded timeout #{wait_timeout}, sending 'pending' notificaiton"
+        send_email_notification "When! [NOT] still awaiting #{@options[:trigger_file]} to exist", <<-END
+
+I started watching for #{@options[:trigger_file]} on #{hostname} at #{@start_time.to_s} (#{@start_time.to_i}), I've been watching for it #{elapsed_time} seconds so far.
+
+Awaiting it's arrival,
+
+TellMeWhen
+        END
+      end
+    end
+    @end_time = Time.now
+
+    send_email_notification "When! #{@options[:trigger_file]} now exists.", <<-END
+
+I started watching for #{@options[:trigger_file]} on #{hostname} at #{@start_time.to_s} (#{@start_time.to_i}), and now, after #{elapsed_time} seconds it has finally shown up as of #{@end_time.to_s} (#{@end_time.to_i})
+
+What is thy next bidding my master?
+
+TellMeWhen
+        END
   end
 
   def wait_on_file_modified args
