@@ -2,6 +2,7 @@
 
 require 'rubygems'
 require 'yaml'
+require 'optparse'
 
 class TellMeWhen
   RC_FILE = "#{ENV['HOME']}/.tellmewhenrc"
@@ -34,6 +35,16 @@ class TellMeWhen
   end
 
   def parse_options
+    @options = {}
+    OptionParser.new do |opts|
+      opts.banner = "Usage: #$0 command args..."
+
+      opts.on("-v","--[no-]verbose", "Run Verbosely.") do |v|
+        options[:verbose] = v
+      end
+    end.parse!
+
+    puts "Options: #{@options.inspect}"
   end
 
   def self.main args
@@ -45,6 +56,7 @@ class TellMeWhen
   end
 
   def run args
+    @command = args
     puts "Use optparse"
     puts "Error if no 'other' command was passed"
     puts "capture the other command's stdout/stderr"
