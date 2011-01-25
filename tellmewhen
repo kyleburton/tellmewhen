@@ -112,6 +112,9 @@ class TellMeWhen
 
   def wait_on_command args
     puts "Do run: #{args}"
+    if args.to_s.empty?
+      raise "Error: you must supply a command to execute"
+    end
     child_pid = Kernel.fork
     if child_pid.nil?
       # in child
@@ -285,10 +288,11 @@ P.S. stdout says:
     end
 
     @start_time = Time.now
-    self.send action, args
     if @options[:write_config_to]
-      app.save_settings @options[:write_config_to]
+      save_settings @options[:write_config_to]
     end
+    save_settings 
+    self.send action, args
     return 1
   end
 end
