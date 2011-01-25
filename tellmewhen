@@ -219,8 +219,39 @@ P.S. stdout says:
     END
   end
 
+  def pid_running? pid
+    lines = `ps #{pid}`.split "\n"
+    lines.count > 1
+  end
+
   def wait_on_pid args
-    raise "Implement wait on pid"
+    # wait until pid exits
+    while pid_running? @options[:pid]
+      sleep 0.250
+      if elapsed_time > wait_timeout
+        puts "Exceeded timeout #{wait_timeout}, sending 'pending' notificaiton"
+        send_email_notification "When! [NOT] still awaiting pid:#{pid} to exit", <<-END
+
+I started watching #{pid} on #{hostname} at #{@start_time.to_s} (#{@start_time.to_i}), I've been watching 'em for  #{elapsed_time} seconds so far.
+
+Awaiting it's demise,
+
+TellMeWhen
+        END
+      end
+    end
+
+    @end_time = Time.now
+
+    send_email_notification "When! pid:#{@options[:pid]} has come to its end", <<-END
+
+I started watching #{@options[:pid]} on #{hostname} at #{@start_time.to_s} (#{@start_time.to_i}), and now, after #{elapsed_time} seconds it has finally gone bellly up.  #{@options[:pid]} will rest in peace as of #{@end_time.to_s} (#{@end_time.to_i})
+
+#{@options[:pid]} will be missed, it was a good little process.  :,)
+
+TellMeWhen
+        END
+
   end
 
   def wait_on_file_exists args

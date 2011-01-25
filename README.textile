@@ -20,6 +20,9 @@ Configuration is then merged from @$HOME/.tellmewhenrc@ if the file exists in @$
 
 h1. Examples
 
+  ./tellmewhen 'sleep 3; ls'
+  ./tellmewhen -p 12345
+
 h1. Authors
 
 h1. License
