@@ -18,10 +18,24 @@ Configuration Defaults:
 
 Configuration is then merged from @$HOME/.tellmewhenrc@ if the file exists in @$HOME@.  Configuration is also merged from @./.tellmewhenrc@ in the current directory, if the file exists.  This allows you some flexibility in overriding settings.
 
+h1. Usage
+
+pre. Usage: ./tellmewhen command args...
+    -v, --[no-]verbose               Run Verbosely.
+    -c, --config=file                Use alternate configuration file.
+    -p, --pid=pid                    Wait for <pid> to terminate.
+    -e, --exists=file                Wait for <file> to exist.
+    -m, --modified=file              Wait for <file> to be modified.
+    -t, --timeout=seconds            Wait for up to <seconds> seconds for the command before sendin a 'pending' notification.
+    -w, --write-config=file          Write [fully merged] configuration to <file> (NB: will not be clobber).
+
+
 h1. Examples
 
-  ./tellmewhen 'sleep 3; ls'
-  ./tellmewhen -p 12345
+pre.    ./tellmewhen 'sleep 3; ls'
+    ./tellmewhen -p 12345
+    ./tellmewhen -e some-file.txt    # await existance
+    ./tellmewhen -m some-file.txt    # await update
 
 h1. Authors
 
