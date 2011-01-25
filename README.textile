@@ -1,0 +1,14 @@
+h1. tellmewhen
+
+Tell me when another program has finshed.  Show me when it started, when it finished and how long it took.  Show me the output and if it errored.
+
+h1. Configuration
+
+@$HOME/.tellmewhen.yml@
+
+h1. Examples
+
+h1. Authors
+
+h1. License
+

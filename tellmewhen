@@ -1,0 +1,23 @@
+#!/usr/bin/env ruby
+
+class TellMeWhen
+  def self.main args
+    app = self.new
+    exit app.run args
+  end
+
+
+  def run args
+    puts "Use optparse"
+    puts "Error if no 'other' command was passed"
+    puts "capture the other command's stdout/stderr"
+    puts "redirect the other command's stdin"
+    puts "time the start and end of the other command"
+    puts "tell me: based on configuration: email (in the future: IM, Popup Dialog, wall, growl, any/all of these)"
+    return 1
+  end
+end
+
+if $0 == __FILE__
+  TellMeWhen.main(ARGV)
+end
