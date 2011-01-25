@@ -14,7 +14,9 @@ I created this utility because I had long running database scripts that I wanted
 
 h1. Configuration
 
-@$HOME/.tellmewhen.yml@
+Configuration Defaults:
+
+Configuration is then merged from @$HOME/.tellmewhenrc@ if the file exists in @$HOME@.  Configuration is also merged from @./.tellmewhenrc@ in the current directory, if the file exists.  This allows you some flexibility in overriding settings.
 
 h1. Examples
 

@@ -3,45 +3,93 @@
 require 'rubygems'
 require 'yaml'
 require 'optparse'
+require 'tempfile'
+require 'net/smtp'
 
 class TellMeWhen
   RC_FILE = "#{ENV['HOME']}/.tellmewhenrc"
+  LOCAL_FILE = ".tellmewhenrc"
 
   def initialize
+    @stdout_file = Tempfile.new('tellmewhen.stdout').path
+    @stderr_file = Tempfile.new('tellmewhen.stdout').path
+  end
+
+  def hostname
+    `hostname`.chomp
   end
 
   def load_settings
     @settings ||= {
       'notify-via' => 'email',
       'email' => {
-         'to'   => "#{ENV['LOGNAME']}@#{`hostname`.chomp}",
-         'from' => "#{ENV['LOGNAME']}@#{`hostname`.chomp}",
+         'to'   => "#{ENV['LOGNAME']}@#{hostname}",
+         'from' => "#{ENV['LOGNAME']}@#{hostname}",
+         'smtp_host' => 'localhost',
+         'smtp_port' => '25'
       }
     }
 
     if File.exist? RC_FILE
       settings = YAML.load_file RC_FILE
       @settings = @settings.merge(settings)
-      puts "Loaded Settings: #{@settings.inspect}"
+      puts "Loaded Settings [#{RC_FILE}]: #{@settings.inspect}"
+    end
+
+    if File.exist? LOCAL_FILE
+      settings = YAML.load_file LOCAL_FILE
+      @settings = @settings.merge(settings)
+      puts "Loaded Settings [#{LOCAL_FILE}]: #{@settings.inspect}"
     end
   end
 
-  def save_settings
-    if ! File.exist? RC_FILE
-      File.open(RC_FILE, "w") do |f|
+  def save_settings target_file=RC_FILE
+    if ! File.exist? target_file
+      File.open(target_file,"w") do |f|
         f.write @settings.to_yaml
       end
     end
   end
 
   def parse_options
-    @options = {}
+    @options = {
+      :wait_on => :command,
+      :wait_timeout => 600  # every 10 min send a 'pending' email
+    }
     OptionParser.new do |opts|
       opts.banner = "Usage: #$0 command args..."
 
       opts.on("-v","--[no-]verbose", "Run Verbosely.") do |v|
-        options[:verbose] = v
+        @options[:verbose] = v
       end
+
+      opts.on("-c","--config=file", "Use alternate configuration file.") do |file|
+        @options[:config_file] = file
+      end
+
+      opts.on("-p","--pid=pid", "Wait for <pid> to terminate.") do |pid|
+        @options[:wait_on] = :pid
+        @options[:pid]     = pid
+      end
+
+      opts.on("-e","--exists=file", "Wait for <file> to exist.") do |file|
+        @options[:wait_on] = :file_exists
+        @options[:trigger_file] = file
+      end
+
+      opts.on("-m","--modified=file", "Wait for <file> to be modified.") do |file|
+        @options[:wait_on]       = :file_modified
+        @options[:trigger_file]  = file
+      end
+
+      opts.on("-t","--timeout=seconds", "Wait for up to <seconds> seconds for the command before sendin a 'pending' notification.") do |seconds|
+        @options[:wait_timeout] = seconds
+      end
+
+      opts.on("-w","--write-config=file", "Write [fully merged] configuration to <file> (NB: will not be clobber).") do |file|
+        @options[:write_config_to] = file
+      end
+
     end.parse!
 
     puts "Options: #{@options.inspect}"
@@ -51,18 +99,196 @@ class TellMeWhen
     app = self.new
     app.parse_options
     app.load_settings
-    app.save_settings
     exit app.run args
+  end
+
+  def elapsed_time
+    Time.now.to_i - @start_time.to_i
+  end
+
+  def wait_timeout
+    @options[:wait_timeout]
+  end
+
+  def wait_on_command args
+    puts "Do run: #{args}"
+    child_pid = Kernel.fork
+    if child_pid.nil?
+      # in child
+      STDOUT.reopen(File.open(@stdout_file, 'w+'))
+      STDERR.reopen(File.open(@stderr_file, 'w+'))
+      STDIN.close
+      exec "bash", "-c", args.to_s
+    else
+      # in parent
+      child_exited = false
+      while ! child_exited
+        if Process.wait child_pid, Process::WNOHANG
+          puts "Child exited: #{$?.exitstatus}"
+          @exit_status = $?.exitstatus
+          child_exited = true
+        end
+        sleep(0.250)
+        if elapsed_time > wait_timeout
+          puts "Exceeded timeout #{wait_timeout}, sending 'pending' notificaiton"
+          send_pending_notification
+        end
+      end
+    end
+
+    @end_time = Time.now
+    if @exit_status == 0
+      body = <<-BODY
+Just wanted to let you know that:
+
+      #{args.to_s}
+
+completed on #{hostname}, with an exit code of: #{@exit_status}
+
+It started at #{@start_time.to_s} (#{@start_time.to_i}), finished at #{@end_time.to_s} (#{@end_time.to_i}) and took a total of #{elapsed_time} seconds.
+
+May your day continue to be full of win.
+
+Sincerely,
+
+Tellmewhen
+
+#{email_footer}
+BODY
+
+      send_email_notification "When! SUCCESS for #{args.to_s.split.first}...", body
+    else
+      body = <<-BODY
+Just wanted to let you know that:
+
+      #{args.to_s}
+
+FAILED! on #{hostname}, with an exit code of: #{@exit_status}
+
+It started at #{@start_time.to_s} (#{@start_time.to_i}), finished at #{@end_time.to_s} (#{@end_time.to_i}) and took a total of #{elapsed_time} seconds to collapse in a steaming heap of failure.
+
+Have a nice day.
+
+Warmest Regards,
+
+Tellmewhen
+
+#{email_footer}
+BODY
+
+      send_email_notification "When! FAILURE for #{args.split.first}...", body
+    end
+  end
+
+  def send_pending_notification
+    body = <<-BODY
+Just wanted to let you know that:
+
+    #{args.to_s}
+
+Is _STILL_ running on #{hostname}, it has not exited.  You did want me to let you know didn't you?
+
+I started the darn thing at #{@start_time.to_s} (#{@start_time.to_i}) and it has taken a total of #{elapsed_time} seconds so far.
+
+Just thought you'd like to know.  I'll continue to keep watching what you asked me to. (boor-ring!)
+
+Cordially,
+
+Tellmewhen
+
+#{email_footer}
+BODY
+
+    send_email_notification "When! [NOT] I'm _still_ waiting for #{args.split.first}...", body
+  end
+
+  def email_footer
+    return <<-END
+P.S. stderr says:
+--
+#{File.read(@stderr_file)}
+--
+
+P.S. stdout says:
+--
+#{File.read(@stdout_file)}
+--
+    END
+  end
+
+  def wait_on_pid args
+    raise "Implement wait on pid"
+  end
+
+  def wait_on_file_exists args
+    raise "Implement wait on file exists"
+  end
+
+  def wait_on_file_modified args
+    raise "Implement wait on file modified"
+  end
+
+  def smtp_host
+    @settings["email"]["smtp_host"]
+  end
+
+  def smtp_port
+    @settings["email"]["smtp_port"]
+  end
+
+  def send_email_notification subject, body
+    # optionally send via /usr/bin/mail or sendmail binary if it exists...
+    puts "Sending email: from:#{@settings["email"]["from"]} to:#{@settings["email"]["to"]}"
+    begin
+      Net::SMTP.start(smtp_host, smtp_port) do |smtp|
+        smtp.open_message_stream('from_addr', @settings["email"]["to"].split(',')) do |f|
+          f.puts "From: #{@settings["email"]["from"]}"
+          f.puts "To: #{@settings["email"]["to"]}"
+          f.puts "Subject: #{subject}"
+          f.puts ""
+          f.puts body
+        end
+      end
+    end
+  rescue Errno::ECONNREFUSED => e
+    if File.exist? "/usr/sbin/sendmail"
+      body_file = Tempfile.new("tellmewhen.mail.body")
+      File.open(body_file.path,"w") do |f|
+        f.puts "From: #{@settings["email"]["from"]}"
+        f.puts "To: #{@settings["email"]["to"]}"
+        f.puts "Subject: #{subject}"
+        f.puts ""
+        f.write body
+      end
+      system "/usr/sbin/sendmail -f #{@settings["email"]["from"]} '#{@settings["email"]["to"]}' < #{body_file.path}"
+    elsif File.exist? "/usr/bin/mail"
+      raise "Implement sending via /usr/bin/mail"
+      body_file = Tempfile.new("tellmewhen.mail.body")
+      File.open(body_file.path,"w") do |f|
+        f.puts "From: #{@settings["email"]["from"]}"
+        f.puts "To: #{@settings["email"]["to"]}"
+        f.puts "Subject: #{subject}"
+        f.puts ""
+        f.write body
+      end
+      system "/usr/bin/mail '#{@settings["email"]["to"]}' < #{body_file.path}"
+    else
+      raise "No smtp server (that we can connect to) at #{smtp_host}:#{smtp_port}, could not fall back to /usr/bin/mail either (doesn't exist).  Sorry, tried my best."
+    end
   end
 
   def run args
     @command = args
-    puts "Use optparse"
-    puts "Error if no 'other' command was passed"
-    puts "capture the other command's stdout/stderr"
-    puts "redirect the other command's stdin"
-    puts "time the start and end of the other command"
-    puts "tell me: based on configuration: email (in the future: IM, Popup Dialog, wall, growl, any/all of these)"
+    action = "wait_on_#{@options[:wait_on].to_s}".to_sym
+    if ! self.respond_to? action
+      raise "Error: don't know how to wait on: #{@options[:wait_on]}"
+    end
+
+    @start_time = Time.now
+    self.send action, args
+    if @options[:write_config_to]
+      app.save_settings @options[:write_config_to]
+    end
     return 1
   end
 end
