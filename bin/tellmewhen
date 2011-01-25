@@ -378,6 +378,6 @@ TellMeWhen
   end
 end
 
-if $0 == __FILE__
+if File.basename($0) == File.basename(__FILE__)
   TellMeWhen.main(ARGV)
 end

@@ -48,3 +48,14 @@ I'd like to clean up the internals: how emails are composed.
 I'd like to support other notification channels, like Instant Messaging or SMS.  Multiple at one time, controlled through the configuration yaml.
 
 What would you like?
+
+
+h1. Changes
+
+h5. 1.0.1 Tue Jan 25 18:16:01 EST 2011
+
+Update runner to compare File.basename($0) == File.basename(__FILE__) so it can run when installed as the gem.
+
+h5. 1.0.0 Mon Jan 24 21:15:32 EST 2011
+
+Initial Release
