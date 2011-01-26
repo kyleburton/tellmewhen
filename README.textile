@@ -68,7 +68,7 @@ Just wanted to let you know that:
 
    sleep 5; ls
 
-Is _STILL_ running on hub.relayzone.com, it has not exited.  You did want me to let you know didn't you?
+Is _STILL_ running on your-host.com, it has not exited.  You did want me to let you know didn't you?
 
 I started the darn thing at Tue Jan 25 23:25:01 -0500 2011 (1296015901) and it has taken a total of 3 seconds so far.
 
@@ -100,7 +100,7 @@ Just wanted to let you know that:
 
      sleep 5; ls
 
-completed on hub.relayzone.com, with an exit code of: 0
+completed on your-host.com, with an exit code of: 0
 
 It started at Tue Jan 25 23:25:01 -0500 2011 (1296015901), finished at Tue Jan 25 23:25:06 -0500 2011 (1296015906) and took a total of 5 seconds.
 
