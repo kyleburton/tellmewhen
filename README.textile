@@ -1,6 +1,6 @@
 h1. tellmewhen
 
-Tell me when another program has finshed.  Show me when it started, when it finished and how long it took.  Show me the output and if it errored.
+Tell me when another program has finshed.  Tell me when it started, tell when it finished.  Tell me how long it took.  Tell me the output and if it failed.
 
 I created this utility because I had long running database scripts that I wanted a completion notification for - including a summary of the time and exit code.  I had done this various ways in the past by using bash and other shell utilities.  This program captures all of the features and behavior I wanted without having to script it from scratch again every time I needed it.
 
@@ -9,18 +9,31 @@ I created this utility because I had long running database scripts that I wanted
 * sends email
 * includes start/stop/elapsed timing
 * success/fail based on exit code
-* watch an already running process (by pid, by grep pattern over 'ps aux')
-* release as a gem so it's easy to use/install
+* watch an already running process (by pid)
+* released as a gem so it's easy to use/install
+
+h1. Installation
+
+   gem install tellmewhen 
 
 h1. Configuration
 
 Configuration Defaults:
 
+<pre>
+  --- 
+  notify-via: email
+  email: 
+    from: `echo $LOGNAME`@`hostname
+    to: `echo $LOGNAME`@`hostname
+</pre>
+
 Configuration is then merged from @$HOME/.tellmewhenrc@ if the file exists in @$HOME@.  Configuration is also merged from @./.tellmewhenrc@ in the current directory, if the file exists.  This allows you some flexibility in overriding settings.
 
 h1. Usage
 
-pre. Usage: ./tellmewhen command args...
+<pre>
+Usage: ./tellmewhen command args...
     -v, --[no-]verbose               Run Verbosely.
     -c, --config=file                Use alternate configuration file.
     -p, --pid=pid                    Wait for <pid> to terminate.
@@ -28,14 +41,16 @@ pre. Usage: ./tellmewhen command args...
     -m, --modified=file              Wait for <file> to be modified.
     -t, --timeout=seconds            Wait for up to <seconds> seconds for the command before sendin a 'pending' notification.
     -w, --write-config=file          Write [fully merged] configuration to <file> (NB: will not be clobber).
-
+</pre>
 
 h1. Examples
 
-pre.    ./tellmewhen 'sleep 3; ls'
+<pre>
+    ./tellmewhen 'sleep 3; ls'
     ./tellmewhen -p 12345
     ./tellmewhen -e some-file.txt    # await existance
     ./tellmewhen -m some-file.txt    # await update
+</pre>
 
 h1. Authors
 

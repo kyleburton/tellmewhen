@@ -102,8 +102,8 @@ class TellMeWhen
     exit app.run args
   end
 
-  def elapsed_time
-    Time.now.to_i - @start_time.to_i
+  def elapsed_time since
+    Time.now.to_i - since.to_i
   end
 
   def wait_timeout
@@ -112,10 +112,12 @@ class TellMeWhen
 
   def wait_on_command args
     puts "Do run: #{args}"
+    @current_command = args.to_s
     if args.to_s.empty?
       raise "Error: you must supply a command to execute"
     end
     child_pid = Kernel.fork
+    last_check_time = Time.now
     if child_pid.nil?
       # in child
       STDOUT.reopen(File.open(@stdout_file, 'w+'))
@@ -132,7 +134,8 @@ class TellMeWhen
           child_exited = true
         end
         sleep(0.250)
-        if elapsed_time > wait_timeout
+        if elapsed_time(last_check_time) > wait_timeout.to_i
+          last_check_time = Time.now
           puts "Exceeded timeout #{wait_timeout}, sending 'pending' notificaiton"
           send_pending_notification
         end
@@ -148,7 +151,7 @@ Just wanted to let you know that:
 
 completed on #{hostname}, with an exit code of: #{@exit_status}
 
-It started at #{@start_time.to_s} (#{@start_time.to_i}), finished at #{@end_time.to_s} (#{@end_time.to_i}) and took a total of #{elapsed_time} seconds.
+It started at #{@start_time.to_s} (#{@start_time.to_i}), finished at #{@end_time.to_s} (#{@end_time.to_i}) and took a total of #{elapsed_time(@start_time)} seconds.
 
 May your day continue to be full of win.
 
@@ -168,7 +171,7 @@ Just wanted to let you know that:
 
 FAILED! on #{hostname}, with an exit code of: #{@exit_status}
 
-It started at #{@start_time.to_s} (#{@start_time.to_i}), finished at #{@end_time.to_s} (#{@end_time.to_i}) and took a total of #{elapsed_time} seconds to collapse in a steaming heap of failure.
+It started at #{@start_time.to_s} (#{@start_time.to_i}), finished at #{@end_time.to_s} (#{@end_time.to_i}) and took a total of #{elapsed_time(@start_time)} seconds to collapse in a steaming heap of failure.
 
 Have a nice day.
 
@@ -187,11 +190,11 @@ BODY
     body = <<-BODY
 Just wanted to let you know that:
 
-    #{args.to_s}
+    #{@current_command}
 
 Is _STILL_ running on #{hostname}, it has not exited.  You did want me to let you know didn't you?
 
-I started the darn thing at #{@start_time.to_s} (#{@start_time.to_i}) and it has taken a total of #{elapsed_time} seconds so far.
+I started the darn thing at #{@start_time.to_s} (#{@start_time.to_i}) and it has taken a total of #{elapsed_time(@start_time)} seconds so far.
 
 Just thought you'd like to know.  I'll continue to keep watching what you asked me to. (boor-ring!)
 
@@ -202,7 +205,7 @@ Tellmewhen
 #{email_footer}
 BODY
 
-    send_email_notification "When! [NOT] I'm _still_ waiting for #{args.split.first}...", body
+    send_email_notification "When! [NOT] I'm _still_ waiting for #{@current_command.split.first}...", body
   end
 
   def email_footer
@@ -226,13 +229,16 @@ P.S. stdout says:
 
   def wait_on_pid args
     # wait until pid exits
+    @current_command = "wait on pid: #{@options[:pid]}"
+    last_check_time = Time.now
     while pid_running? @options[:pid]
       sleep 0.250
-      if elapsed_time > wait_timeout
+      if elapsed_time(last_check_time) > wait_timeout
+        last_check_time = Time.now
         puts "Exceeded timeout #{wait_timeout}, sending 'pending' notificaiton"
         send_email_notification "When! [NOT] still awaiting pid:#{pid} to exit", <<-END
 
-I started watching #{pid} on #{hostname} at #{@start_time.to_s} (#{@start_time.to_i}), I've been watching 'em for  #{elapsed_time} seconds so far.
+I started watching #{pid} on #{hostname} at #{@start_time.to_s} (#{@start_time.to_i}), I've been watching 'em for  #{elapsed_time(@start_time)} seconds so far.
 
 Awaiting it's demise,
 
@@ -245,7 +251,7 @@ TellMeWhen
 
     send_email_notification "When! pid:#{@options[:pid]} has come to its end", <<-END
 
-I started watching #{@options[:pid]} on #{hostname} at #{@start_time.to_s} (#{@start_time.to_i}), and now, after #{elapsed_time} seconds it has finally gone bellly up.  #{@options[:pid]} will rest in peace as of #{@end_time.to_s} (#{@end_time.to_i})
+I started watching #{@options[:pid]} on #{hostname} at #{@start_time.to_s} (#{@start_time.to_i}), and now, after #{elapsed_time(@start_time)} seconds it has finally gone bellly up.  #{@options[:pid]} will rest in peace as of #{@end_time.to_s} (#{@end_time.to_i})
 
 #{@options[:pid]} will be missed, it was a good little process.  :,)
 
@@ -255,13 +261,16 @@ TellMeWhen
   end
 
   def wait_on_file_exists args
+    @current_command = "wait on file exists: #{@options[:trigger_file]}"
+    last_check_time = Time.now
     while !File.exist? @options[:trigger_file]
       sleep 0.250
-      if elapsed_time > wait_timeout
+      if elapsed_time(last_check_time) > wait_timeout
+        last_check_time = Time.now
         puts "Exceeded timeout #{wait_timeout}, sending 'pending' notificaiton"
         send_email_notification "When! [NOT] still awaiting #{@options[:trigger_file]} to exist", <<-END
 
-I started watching for #{@options[:trigger_file]} on #{hostname} at #{@start_time.to_s} (#{@start_time.to_i}), I've been watching for it #{elapsed_time} seconds so far.
+I started watching for #{@options[:trigger_file]} on #{hostname} at #{@start_time.to_s} (#{@start_time.to_i}), I've been watching for it #{elapsed_time(@start_time)} seconds so far.
 
 Awaiting it's arrival,
 
@@ -273,7 +282,7 @@ TellMeWhen
 
     send_email_notification "When! #{@options[:trigger_file]} now exists.", <<-END
 
-I started watching for #{@options[:trigger_file]} on #{hostname} at #{@start_time.to_s} (#{@start_time.to_i}), and now, after #{elapsed_time} seconds it has finally shown up as of #{@end_time.to_s} (#{@end_time.to_i})
+I started watching for #{@options[:trigger_file]} on #{hostname} at #{@start_time.to_s} (#{@start_time.to_i}), and now, after #{elapsed_time(@start_time)} seconds it has finally shown up as of #{@end_time.to_s} (#{@end_time.to_i})
 
 What is thy next bidding my master?
 
@@ -282,16 +291,19 @@ TellMeWhen
   end
 
   def wait_on_file_modified args
+    @current_command = "wait on file modified: #{@options[:trigger_file]}"
     trigger_file = @options[:trigger_file]
     initial_mtime = File.mtime trigger_file
 
+    last_check_time = Time.now
     while initial_mtime == File.mtime(trigger_file)
       sleep 0.250
-      if elapsed_time > wait_timeout
+      if elapsed_time(last_check_time) > wait_timeout
+        last_check_time = Time.now
         puts "Exceeded timeout #{wait_timeout}, sending 'pending' notificaiton"
         send_email_notification "When! [NOT] still awaiting #{@options[:trigger_file]} to change", <<-END
 
-I started watching for #{@options[:trigger_file]} to be updated on #{hostname} at #{@start_time.to_s} (#{@start_time.to_i}), I've been watching for it #{elapsed_time} seconds so far.
+I started watching for #{@options[:trigger_file]} to be updated on #{hostname} at #{@start_time.to_s} (#{@start_time.to_i}), I've been watching for it #{elapsed_time(@start_time)} seconds so far.
 
 Awaiting it's update,
 
@@ -304,7 +316,7 @@ TellMeWhen
 
     send_email_notification "When! #{@options[:trigger_file]} was updated.", <<-END
 
-I started watching for #{@options[:trigger_file]} to be updated on #{hostname} at #{@start_time.to_s} (#{@start_time.to_i}), and now, after #{elapsed_time} seconds it has finally been modified as of #{@end_time.to_s} (#{@end_time.to_i})
+I started watching for #{@options[:trigger_file]} to be updated on #{hostname} at #{@start_time.to_s} (#{@start_time.to_i}), and now, after #{elapsed_time(@start_time)} seconds it has finally been modified as of #{@end_time.to_s} (#{@end_time.to_i})
 
 POSIX is my zen,
 
@@ -321,11 +333,21 @@ TellMeWhen
   end
 
   def send_email_notification subject, body
+    if @settings["email"]["method"] == "smtp"
+      send_email_notification_via_smtp subject, body
+    elsif @settings["email"]["method"] == "mailtools"
+      send_email_notification_via_mailtools subject, body
+    else
+      send_email_notification_via_smtp subject, body
+    end
+  end
+
+  def send_email_notification_via_smtp subject, body
     # optionally send via /usr/bin/mail or sendmail binary if it exists...
-    puts "Sending email: from:#{@settings["email"]["from"]} to:#{@settings["email"]["to"]}"
+    puts "[SMTP] Sending email: from:#{@settings["email"]["from"]} to:#{@settings["email"]["to"]}"
     begin
       Net::SMTP.start(smtp_host, smtp_port) do |smtp|
-        smtp.open_message_stream('from_addr', @settings["email"]["to"].split(',')) do |f|
+        smtp.open_message_stream(@settings["email"]["from"], @settings["email"]["to"].split(',')) do |f|
           f.puts "From: #{@settings["email"]["from"]}"
           f.puts "To: #{@settings["email"]["to"]}"
           f.puts "Subject: #{subject}"
@@ -335,6 +357,11 @@ TellMeWhen
       end
     end
   rescue Errno::ECONNREFUSED => e
+    send_email_notification_via_mailtools subject, body
+  end
+
+  def send_email_notification_via_mailtools subject, body
+    puts "[mailtools] Sending email: from:#{@settings["email"]["from"]} to:#{@settings["email"]["to"]}"
     if File.exist? "/usr/sbin/sendmail"
       body_file = Tempfile.new("tellmewhen.mail.body")
       File.open(body_file.path,"w") do |f|
