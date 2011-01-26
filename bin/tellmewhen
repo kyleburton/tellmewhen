@@ -372,7 +372,7 @@ TellMeWhen
         f.write body
       end
       puts "[sendmail] /usr/sbin/sendmail -f #{@settings["email"]["from"]} '#{@settings["email"]["to"]}' < #{body_file.path}"
-      require 'ruby-debug'; debugger; 1;
+      #require 'ruby-debug'; debugger; 1;
       system "/usr/sbin/sendmail -f #{@settings["email"]["from"]} '#{@settings["email"]["to"]}' < #{body_file.path}"
     elsif File.exist? "/usr/bin/mail"
       puts "[mailtools/mail] Sending email: from:#{@settings["email"]["from"]} to:#{@settings["email"]["to"]}"
