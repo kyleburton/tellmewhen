@@ -15,6 +15,11 @@ class TellMeWhen
     @stderr_file = Tempfile.new('tellmewhen.stdout').path
   end
 
+
+  def max_bytes_to_read_from_file
+    8 * 1024
+  end
+
   def hostname
     `hostname`.chomp
   end
@@ -212,12 +217,12 @@ BODY
     return <<-END
 P.S. stderr says:
 --
-#{File.read(@stderr_file)}
+#{File.read(@stderr_file,max_bytes_to_read_from_file)}
 --
 
 P.S. stdout says:
 --
-#{File.read(@stdout_file)}
+#{File.read(@stdout_file,max_bytes_to_read_from_file)}
 --
     END
   end
