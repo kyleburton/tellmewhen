@@ -361,8 +361,8 @@ TellMeWhen
   end
 
   def send_email_notification_via_mailtools subject, body
-    puts "[mailtools] Sending email: from:#{@settings["email"]["from"]} to:#{@settings["email"]["to"]}"
     if File.exist? "/usr/sbin/sendmail"
+      puts "[mailtools/sendmail] Sending email: from:#{@settings["email"]["from"]} to:#{@settings["email"]["to"]}"
       body_file = Tempfile.new("tellmewhen.mail.body")
       File.open(body_file.path,"w") do |f|
         f.puts "From: #{@settings["email"]["from"]}"
@@ -371,9 +371,11 @@ TellMeWhen
         f.puts ""
         f.write body
       end
+      puts "[sendmail] /usr/sbin/sendmail -f #{@settings["email"]["from"]} '#{@settings["email"]["to"]}' < #{body_file.path}"
+      require 'ruby-debug'; debugger; 1;
       system "/usr/sbin/sendmail -f #{@settings["email"]["from"]} '#{@settings["email"]["to"]}' < #{body_file.path}"
     elsif File.exist? "/usr/bin/mail"
-      raise "Implement sending via /usr/bin/mail"
+      puts "[mailtools/mail] Sending email: from:#{@settings["email"]["from"]} to:#{@settings["email"]["to"]}"
       body_file = Tempfile.new("tellmewhen.mail.body")
       File.open(body_file.path,"w") do |f|
         f.puts "From: #{@settings["email"]["from"]}"
