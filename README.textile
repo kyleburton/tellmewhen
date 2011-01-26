@@ -52,6 +52,80 @@ h1. Examples
     ./tellmewhen -m some-file.txt    # await update
 </pre>
 
+You can also have 'pending' notifications so that you know things are still going:
+
+<pre>
+    ./tellmewhen -t 2 'sleep 5; ls'
+</pre>
+
+Produces 2 emails.  The pending mail is:
+
+<pre>
+Subject: When! [NOT] I'm _still_ waiting for sleep...
+Body:
+
+Just wanted to let you know that:
+
+   sleep 5; ls
+
+Is _STILL_ running on hub.relayzone.com, it has not exited.  You did want me to let you know didn't you?
+
+I started the darn thing at Tue Jan 25 23:25:01 -0500 2011 (1296015901) and it has taken a total of 3 seconds so far.
+
+Just thought you'd like to know.  I'll continue to keep watching what you asked me to. (boor-ring!)
+
+Cordially,
+
+Tellmewhen
+
+P.S. stderr says:
+--
+
+--
+
+P.S. stdout says:
+--
+
+--
+</pre>
+
+
+And a final mail when it completed:
+
+<pre>
+Subject: When! SUCCESS for sleep...
+Body:
+
+Just wanted to let you know that:
+
+     sleep 5; ls
+
+completed on hub.relayzone.com, with an exit code of: 0
+
+It started at Tue Jan 25 23:25:01 -0500 2011 (1296015901), finished at Tue Jan 25 23:25:06 -0500 2011 (1296015906) and took a total of 5 seconds.
+
+May your day continue to be full of win.
+
+Sincerely,
+
+Tellmewhen
+
+P.S. stderr says:
+--
+
+--
+
+P.S. stdout says:
+--
+README.textile
+Rakefile
+bin
+foo
+tellmewhen.gemspec
+
+--
+</pre>
+
 h1. Authors
 
 h1. License
