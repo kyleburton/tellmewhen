@@ -14,7 +14,7 @@ I created this utility because I had long running database scripts that I wanted
 
 h1. Installation
 
-   gem install tellmewhen 
+pre.  gem install tellmewhen 
 
 h1. Configuration
 
@@ -126,9 +126,13 @@ tellmewhen.gemspec
 --
 </pre>
 
-h1. Authors
+h1. Contributors
+
+Kyle Burton <kyle.burton@gmail.com>
 
 h1. License
+
+"MIT":http://www.opensource.org/licenses/mit-license.php
 
 h1. Patches Welcome
 
