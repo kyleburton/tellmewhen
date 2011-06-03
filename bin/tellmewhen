@@ -412,6 +412,6 @@ TellMeWhen
   end
 end
 
-if File.basename($0) == File.basename(__FILE__)
-  TellMeWhen.main(ARGV)
-end
+#if File.basename($0) == File.basename(__FILE__)
+  #TellMeWhen.main(ARGV)
+#end
