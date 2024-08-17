@@ -1,0 +1,29 @@
+#!/usr/bin/bash
+
+bake_task build "Build the project"
+function build () {
+    go build .
+}
+
+bake_task lint "Lint/Tidy/Format"
+function lint () {
+    go fmt .
+    golangci-lint run
+    go mod tidy
+}
+
+bake_task run-tests "Run Test Suite"
+function run-tests () {
+    test -d "./testing/tmp" || mkdir -p "./testing/tmp"
+    go test
+}
+
+bake_task debug-tests "Debug (dlv) Test Suite"
+function debug-tests () {
+    bake_echo_green "try:"
+    bake_echo_green "  funcs github.com/kyleburton/tellmewhen.Test*"
+    bake_echo_green "  break github.com/kyleburton/tellmewhen.TestWaitForFileToExist"
+    bake_echo_green "  continue"
+    bake_echo_green ""
+    dlv test
+}

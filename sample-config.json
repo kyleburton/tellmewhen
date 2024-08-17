@@ -1,0 +1,15 @@
+{
+  "WaitOn":             "WaitOnFileExists",
+  "NotifyType":         "NotifyViaCommand",
+  "DoNotify":           false,
+  "NotifyEverySeconds": 0,
+  "FileName":           "./completed",
+  "DirName":            "",
+  "Pid":                0,
+  "PidExitCode":        0,
+  "UseHttps":           false,
+  "HostOrAddress":      "",
+  "Port":               "",
+  "NotifyCommand":      "zenity --info --title \"Notification\" --text \"Your THING has happened\"",
+  "NotifyUrl":          ""
+}
