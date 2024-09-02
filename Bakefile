@@ -1,5 +1,7 @@
 #!/usr/bin/bash
 
+[[ -n "${DEBUG:-}" ]] && set -x
+
 bake_task build "Build the project"
 function build () {
     go build .
@@ -8,14 +10,16 @@ function build () {
 bake_task lint "Lint/Tidy/Format"
 function lint () {
     go fmt .
-    golangci-lint run
     go mod tidy
+    golangci-lint run
 }
 
 bake_task run-tests "Run Test Suite"
 function run-tests () {
     test -d "./testing/tmp" || mkdir -p "./testing/tmp"
     go test
+
+    bash ./scripts/run-integration-tests.sh
 }
 
 bake_task debug-tests "Debug (dlv) Test Suite"
@@ -26,4 +30,18 @@ function debug-tests () {
     bake_echo_green "  continue"
     bake_echo_green ""
     dlv test
+}
+
+
+bake_task run "go run *.go ..."
+function run () {
+    # shellcheck disable=SC2046
+    # shellcheck disable=SC2068
+    go run $(find . -name '*.go' -type f | grep -v _test.go | tr \\n ' ') "$@"
+}
+
+bake_task debug "dlv *.go ..."
+function debug () {
+    # shellcheck disable=SC2046
+    dlv debug "$@"
 }
