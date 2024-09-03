@@ -170,9 +170,9 @@ func TestFileChanged(t *testing.T) {
 		t.Fatalf("Error: unable to ensure file does not exist: TEST_FILE_NAME=%s; err=%v", TEST_FILE_NAME, err)
 	}
 
-	currentTime := time.Now().Local()
-	currentTime.Add(time.Duration(-1) * time.Minute)
-	err = os.Chtimes(TEST_FILE_NAME, currentTime, currentTime)
+	currTime := time.Now().Local()
+	oneMinAgo := currTime.Add(time.Duration(-1) * time.Minute)
+	err = os.Chtimes(TEST_FILE_NAME, oneMinAgo, oneMinAgo)
 	if err != nil {
 		t.Fatalf("Error: unable to set create and modification time of TEST_FILE_NAME=%s; err=%v", TEST_FILE_NAME, err)
 	}
@@ -280,6 +280,18 @@ func TestDirChangedCondition(t *testing.T) {
 	err = SetupEnsureTestDirectory(t)
 	if err != nil {
 		t.Fatalf("Error: unable to ensure dir=%s exists: err=%v", TEST_DIR_NAME, err)
+	}
+
+	currTime := time.Now().Local()
+	oneMinAgo := currTime.Add(time.Duration(-1) * time.Minute)
+	err = os.Chtimes(TEST_DIR_NAME, oneMinAgo, oneMinAgo)
+	if err != nil {
+		t.Fatalf("Error: unable to set create and modification time of TEST_FILE_NAME=%s; err=%v", TEST_FILE_NAME, err)
+	}
+
+	condition, err = condition.Init()
+	if err != nil {
+		t.Fatalf("Error: failed init DirChangedCondition; err=%v", err)
 	}
 
 	condition, res, err := condition.Check()

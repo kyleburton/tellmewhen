@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	_ "fmt"
+	// "fmt"
 	"io/fs"
 	"net"
 	"os"
@@ -59,7 +59,7 @@ func (self FileRemovedCondition) Check() (Condition, bool, error) {
 		return condition, condition.Removed, nil
 	}
 
-	return self, self.Removed, err
+	return self, false, err
 }
 
 /******************************************************************************/
@@ -166,6 +166,12 @@ type DirChangedCondition struct {
 }
 
 func (self DirChangedCondition) Init() (Condition, error) {
+	fileInfo, err := os.Stat(self.DirName)
+	if err != nil {
+		return self, err
+	}
+
+	self.FileInfo = &fileInfo
 	return self, nil
 }
 
@@ -179,11 +185,8 @@ func (self DirChangedCondition) Check() (Condition, bool, error) {
 		return self, false, err
 	}
 
-	if self.FileInfo == nil {
-		return DirChangedCondition{DirName: self.DirName, FileInfo: &fileInfo, Changed: false}, false, nil
-	}
-
-	if (*self.FileInfo).ModTime().Equal(fileInfo.ModTime()) {
+	// fmt.Printf("DirChangedCondition: prev:%v curr:%v\n", (*self.FileInfo).ModTime(), fileInfo.ModTime())
+	if !(*self.FileInfo).ModTime().Equal(fileInfo.ModTime()) {
 		condition := DirChangedCondition{DirName: self.DirName, FileInfo: &fileInfo, Changed: true}
 		return condition, condition.Changed, nil
 	}

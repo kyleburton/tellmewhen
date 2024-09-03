@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"time"
 )
 
@@ -102,28 +103,34 @@ func StringToNotificationType(str string) NotificationType {
 
 // //////////////////////////////////////
 type Config struct {
-	WaitOn             string `json:"wait-on,omitempty"`
-	NotifyType         string `json:"notify-via"`
+	// WaitOn             string `json:"wait-on,omitempty"`
+	// NotifyType         string `json:"notify-via"`
 	DoNotify           bool   `json:"notify"`
 	NotifyEverySeconds int    `json:"notify-every-seconds"`
-	FileName           string `json:"file-name"`
-	DirName            string `json:"dir-name"`
-	Pid                int    `json:"pid"`
-	PidExitCode        int    `json:"pid-exit-code"`
 	UseHttps           bool   `json:"use-https"`
 	HostOrAddress      string `json:"host-or-address"`
 	Port               string `json:"port"`
 	NotifyCommand      string `json:"notify-command"`
 	NotifyUrl          string `json:"notify-url"`
+
 	// File Operations
 	FileExists  string `json:"file-exists"`
 	FileRemoved string `json:"file-removed"`
 	FileUpdated string `json:"file-updated"`
 
+	// Dir Operations
+	DirExists  string `json:"dir-exists"`
+	DirRemoved string `json:"dir-removed"`
+	DirUpdated string `json:"dir-updated"`
+
 	// Porocess Operations
 	CommandExits string `json:"command-exits"`
+	PidExits     string `json:"pid"`
+
 	// Notification Options
 	TellmeViaRunning string `json:"tellme-via-running"`
+
+	// Socket Operations
 }
 
 func (self *Config) ToJson() (string, error) {
@@ -193,12 +200,9 @@ func (self Config) Finalize(condition Condition) error {
 			return err
 		}
 
-		for {
-			err := cmd.Wait()
-			if err != nil {
-				return err
-			}
-			break
+		err = cmd.Wait()
+		if err != nil {
+			return err
 		}
 	}
 
@@ -224,6 +228,53 @@ func (self Config) WaitForCondition(condition Condition) error {
 	}
 }
 
+func (self Config) MakeWatcherCondition() (Condition, error) {
+	////////////////////////////////////////
+	// File Watch Conditions
+	if self.FileExists != "" {
+		return FileExistsCondition{FileName: self.FileExists}, nil
+	}
+
+	if self.FileRemoved != "" {
+		return FileRemovedCondition{FileName: self.FileRemoved}, nil
+	}
+
+	if self.FileUpdated != "" {
+		return FileChangedCondition{FileName: self.FileUpdated}, nil
+	}
+
+	////////////////////////////////////////
+	// Directory Watch Conditions
+	if self.DirExists != "" {
+		return DirExistsCondition{DirName: self.DirExists}, nil
+	}
+
+	if self.DirRemoved != "" {
+		return DirRemovedCondition{DirName: self.DirRemoved}, nil
+	}
+
+	if self.DirUpdated != "" {
+		return DirChangedCondition{DirName: self.DirUpdated}, nil
+	}
+
+	////////////////////////////////////////
+	// Process Watch Conditions
+	if self.PidExits != "" {
+		pid, err := strconv.Atoi(self.PidExits)
+		if err != nil {
+			return nil, err
+		}
+		return PidExitedCondition{Pid: pid}, nil
+	}
+
+	if self.CommandExits != "" {
+		return CommandExitedCondition{CommandStr: self.CommandExits}, nil
+	}
+
+	// TODO: support all of the remaining condition types
+	return nil, nil
+}
+
 func main() {
 	var err error
 	AppConfig := Config{}
@@ -242,8 +293,14 @@ func main() {
 	flag.StringVar(&AppConfig.FileRemoved, "file-removed", "", "Wait for a file to be removed.")
 	flag.StringVar(&AppConfig.FileUpdated, "file-updated", "", "Wait for a file to be updated (mtime).")
 
+	// Dir Operations
+	flag.StringVar(&AppConfig.DirExists, "dir-exists", "", "Wait for a dir to exist.")
+	flag.StringVar(&AppConfig.DirRemoved, "dir-removed", "", "Wait for a dir to be removed.")
+	flag.StringVar(&AppConfig.DirUpdated, "dir-updated", "", "Wait for a dir to be updated (mtime).")
+
 	// Process Operations
 	flag.StringVar(&AppConfig.CommandExits, "command-exits", "", "Specify a command to exec and wait for.")
+	flag.StringVar(&AppConfig.PidExits, "pid", "", "Watch a running process till it exits.")
 
 	// Notification Options
 	flag.StringVar(&AppConfig.TellmeViaRunning, "tellme-via-running", "", "Specify a command to exec to 'tell you'.")
@@ -277,14 +334,9 @@ func main() {
 
 	// TODO: check for conflicting actions (eg: wait for pid / exec process / socket connect)
 	var condition Condition
-
-	// TODO: support all of the condition types
-	if AppConfig.CommandExits != "" {
-		condition = CommandExitedCondition{CommandStr: AppConfig.CommandExits}
-	}
-
-	if AppConfig.FileExists != "" {
-		condition = FileExistsCondition{FileName: AppConfig.FileExists}
+	condition, err = AppConfig.MakeWatcherCondition()
+	if err != nil {
+		panic(err)
 	}
 
 	if nil == condition {
