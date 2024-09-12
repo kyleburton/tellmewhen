@@ -164,7 +164,7 @@ func TestWaitForFileToNotExist(t *testing.T) {
 func TestFileChanged(t *testing.T) {
 	var err error
 	var condition Condition
-	condition = FileChangedCondition{FileName: TEST_FILE_NAME}
+	condition = FileUpdatedCondition{FileName: TEST_FILE_NAME}
 	err = SetupEnsureFile(t, TEST_FILE_NAME, "before change")
 	if err != nil {
 		t.Fatalf("Error: unable to ensure file does not exist: TEST_FILE_NAME=%s; err=%v", TEST_FILE_NAME, err)
@@ -184,11 +184,11 @@ func TestFileChanged(t *testing.T) {
 
 	condition, res, err := condition.Check()
 	if err != nil {
-		t.Fatalf("Error: error executing FileChangedCondition check: condition=%v; err=%v", condition, err)
+		t.Fatalf("Error: error executing FileUpdatedCondition check: condition=%v; err=%v", condition, err)
 	}
 
 	if res {
-		t.Fatalf("Error: FileChangedCondition should have been false as the file hasn't changed yet condition=%v", condition)
+		t.Fatalf("Error: FileUpdatedCondition should have been false as the file hasn't changed yet condition=%v", condition)
 	}
 
 	err = os.WriteFile(TEST_FILE_NAME, []byte("after change"), 0o0644)
@@ -198,11 +198,11 @@ func TestFileChanged(t *testing.T) {
 
 	condition, res, err = condition.Check()
 	if err != nil {
-		t.Fatalf("Error: error executing FileChangedCondition check: condition=%v; err=%v", condition, err)
+		t.Fatalf("Error: error executing FileUpdatedCondition check: condition=%v; err=%v", condition, err)
 	}
 
 	if !res {
-		t.Fatalf("Error: FileChangedCondition should have been true as the file has changed condition=%v", condition)
+		t.Fatalf("Error: FileUpdatedCondition should have been true as the file has changed condition=%v", condition)
 	}
 
 }
@@ -273,10 +273,10 @@ func TestDirRemovedCondition(t *testing.T) {
 	}
 }
 
-func TestDirChangedCondition(t *testing.T) {
+func TestDirUpdatedCondition(t *testing.T) {
 	var err error
 	var condition Condition
-	condition = DirChangedCondition{DirName: TEST_DIR_NAME}
+	condition = DirUpdatedCondition{DirName: TEST_DIR_NAME}
 	err = SetupEnsureTestDirectory(t)
 	if err != nil {
 		t.Fatalf("Error: unable to ensure dir=%s exists: err=%v", TEST_DIR_NAME, err)
@@ -291,7 +291,7 @@ func TestDirChangedCondition(t *testing.T) {
 
 	condition, err = condition.Init()
 	if err != nil {
-		t.Fatalf("Error: failed init DirChangedCondition; err=%v", err)
+		t.Fatalf("Error: failed init DirUpdatedCondition; err=%v", err)
 	}
 
 	condition, res, err := condition.Check()

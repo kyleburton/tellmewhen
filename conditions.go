@@ -63,13 +63,13 @@ func (self FileRemovedCondition) Check() (Condition, bool, error) {
 }
 
 /******************************************************************************/
-type FileChangedCondition struct {
+type FileUpdatedCondition struct {
 	FileName string
 	FileInfo *fs.FileInfo
 	Changed  bool
 }
 
-func (self FileChangedCondition) Init() (Condition, error) {
+func (self FileUpdatedCondition) Init() (Condition, error) {
 	fileInfo, err := os.Stat(self.FileName)
 	if err != nil {
 		return self, err
@@ -79,7 +79,7 @@ func (self FileChangedCondition) Init() (Condition, error) {
 	return self, nil
 }
 
-func (self FileChangedCondition) Check() (Condition, bool, error) {
+func (self FileUpdatedCondition) Check() (Condition, bool, error) {
 	if self.Changed {
 		return self, self.Changed, nil
 	}
@@ -90,7 +90,7 @@ func (self FileChangedCondition) Check() (Condition, bool, error) {
 	}
 
 	if !(*self.FileInfo).ModTime().Equal(fileInfo.ModTime()) {
-		condition := FileChangedCondition{FileName: self.FileName, FileInfo: self.FileInfo, Changed: true}
+		condition := FileUpdatedCondition{FileName: self.FileName, FileInfo: self.FileInfo, Changed: true}
 		return condition, condition.Changed, nil
 	}
 
@@ -159,13 +159,13 @@ func (self DirRemovedCondition) Check() (Condition, bool, error) {
 }
 
 /******************************************************************************/
-type DirChangedCondition struct {
+type DirUpdatedCondition struct {
 	DirName  string
 	FileInfo *fs.FileInfo
 	Changed  bool
 }
 
-func (self DirChangedCondition) Init() (Condition, error) {
+func (self DirUpdatedCondition) Init() (Condition, error) {
 	fileInfo, err := os.Stat(self.DirName)
 	if err != nil {
 		return self, err
@@ -175,7 +175,7 @@ func (self DirChangedCondition) Init() (Condition, error) {
 	return self, nil
 }
 
-func (self DirChangedCondition) Check() (Condition, bool, error) {
+func (self DirUpdatedCondition) Check() (Condition, bool, error) {
 	if self.Changed {
 		return self, self.Changed, nil
 	}
@@ -185,9 +185,9 @@ func (self DirChangedCondition) Check() (Condition, bool, error) {
 		return self, false, err
 	}
 
-	// fmt.Printf("DirChangedCondition: prev:%v curr:%v\n", (*self.FileInfo).ModTime(), fileInfo.ModTime())
+	// fmt.Printf("DirUpdatedCondition: prev:%v curr:%v\n", (*self.FileInfo).ModTime(), fileInfo.ModTime())
 	if !(*self.FileInfo).ModTime().Equal(fileInfo.ModTime()) {
-		condition := DirChangedCondition{DirName: self.DirName, FileInfo: &fileInfo, Changed: true}
+		condition := DirUpdatedCondition{DirName: self.DirName, FileInfo: &fileInfo, Changed: true}
 		return condition, condition.Changed, nil
 	}
 
@@ -228,10 +228,11 @@ func (self PidExitedCondition) Check() (Condition, bool, error) {
 
 /******************************************************************************/
 type CommandExitedCondition struct {
-	CommandStr string
-	Command    *exec.Cmd
-	Exited     bool
-	ExitChan   chan error
+	CommandStr    string
+	Command       *exec.Cmd
+	Exited        bool
+	ExpectFailure bool
+	ExitChan      chan error
 }
 
 func (self CommandExitedCondition) Init() (Condition, error) {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	// "errors"
 	"flag"
 	"fmt"
 	"os"
@@ -146,6 +147,145 @@ func (self *Config) FromJson(b []byte) error {
 	return json.Unmarshal(b, self)
 }
 
+/******************************************************************************/
+
+type Context struct {
+	Debug            bool
+	TellmeViaRunning string
+}
+
+func (self *Context) WaitSucceeded(condition Condition) {
+	if self.TellmeViaRunning != "" {
+		cmd := exec.Command("bash", "-c", self.TellmeViaRunning)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err := cmd.Start()
+		if err != nil {
+			fmt.Printf("Context.WaitSucceeded: error executing --tellme-via-running='%s'; err=%v\n", self.TellmeViaRunning, err)
+			panic(err)
+		}
+
+		err = cmd.Wait()
+		if err != nil {
+			fmt.Printf(": error executing -tellme-via-running='%s'; err=%v\n", self.TellmeViaRunning, err)
+			panic(err)
+		}
+	}
+}
+
+func (self *Context) WaitForCondition(condition Condition) {
+	var err error
+	var res bool
+	for {
+		condition, res, err = condition.Check()
+		if err != nil {
+			fmt.Printf("WaitForCondition: error=%v\n", err)
+			panic(err)
+		}
+
+		if res {
+			self.WaitForCondition(condition)
+			return
+		}
+
+		time.Sleep(100 * time.Millisecond)
+		fmt.Printf(".")
+	}
+}
+
+// File Operations
+type FileExistsCmd struct {
+	FileName string `help:"the path to the file to look for creation of"`
+}
+
+func (self *FileExistsCmd) Run(ctx *Context) {
+	ctx.WaitForCondition(FileExistsCondition{FileName: self.FileName})
+}
+
+type FileRemovedCmd struct {
+	FileName string `help:"the path to the file to watch for removal of"`
+}
+
+func (self *FileRemovedCmd) Run(ctx *Context) {
+	ctx.WaitForCondition(FileRemovedCondition{FileName: self.FileName})
+}
+
+type FileUpdatedCmd struct {
+	FileName string `help:"the path to the file to watch for update of"`
+}
+
+func (self *FileUpdatedCmd) Run(ctx *Context) {
+	ctx.WaitForCondition(FileUpdatedCondition{FileName: self.FileName})
+}
+
+// Directory Operations
+type DirExistsCmd struct {
+	DirName string `help:"the path to the dir to look for creation of"`
+}
+
+func (self *DirExistsCmd) Run(ctx *Context) {
+	ctx.WaitForCondition(DirExistsCondition{DirName: self.DirName})
+}
+
+type DirRemovedCmd struct {
+	DirName string `help:"the path to the dir to watch for removal of"`
+}
+
+func (self *DirRemovedCmd) Run(ctx *Context) {
+	ctx.WaitForCondition(DirRemovedCondition{DirName: self.DirName})
+}
+
+type DirUpdatedCmd struct {
+	DirName string `help:"the path to the dir to watch for update of"`
+}
+
+func (self *DirUpdatedCmd) Run(ctx *Context) {
+	ctx.WaitForCondition(DirUpdatedCondition{DirName: self.DirName})
+}
+
+// Process Operations
+type ProcessExitsCmd struct {
+	Pid int `help:"the process id to watch until it terminates"`
+}
+
+func (self *ProcessExitsCmd) Run(ctx *Context) {
+	ctx.WaitForCondition(PidExitedCondition{Pid: self.Pid})
+}
+
+type ProcessSucceedsCmd struct {
+	Command string `help:"the command to execute until it succeeds (exit 0), via bash -c '<command>'."`
+}
+
+func (self *ProcessSucceedsCmd) Run(ctx *Context) {
+	ctx.WaitForCondition(CommandExitedCondition{Command: self.Command})
+}
+
+type ProcessFailsCmd struct {
+	Command string `help:"the command to execute until it fails (exit non zero), via bash -c '<command>'."`
+}
+
+func (self *ProcessFailsCmd) Run(ctx *Context) {
+	ctx.WaitForCondition(CommandExitedCondition{Command: self.Command})
+}
+
+// top level struct
+type Command struct {
+	// TODO: add notfiy opts
+	TellmeViaRunning string             `help:"Comand to run (via bash -c) to notify you."`
+	Debug            bool               `help:"Enable debug mode."`
+	FileExists       FileExistsCmd      `cmd:"" help:"Notify when a file is created"`
+	FileRemoved      FileRemovedCmd     `cmd:"" help:"Notify when a file is removed"`
+	FileUpdated      FileUpdatedCmd     `cmd:"" help:"Notify when a file is updated"`
+	DirExists        DirExistsCmd       `cmd:"" help:"Notify when a dir is created"`
+	DirRemoved       DirRemovedCmd      `cmd:"" help:"Notify when a dir is removed"`
+	DirUpdated       DirUpdatedCmd      `cmd:"" help:"Notify when a dir is updated"`
+	ProcessExits     ProcessExitsCmd    `cmd:"" help:"Notify when a pid exits"`
+	ProcessSucceeds  ProcessSucceedsCmd `cmd:"" help:"Notify when a command, when run, succeeds"`
+	ProcessFails     ProcessFailsCmd    `cmd:"" help:"Notify when a command, when run, fails"`
+}
+
+/******************************************************************************/
+
 func Help() {
 	fmt.Printf("Tell Me When something has happend.\n")
 	fmt.Printf("\n")
@@ -162,7 +302,6 @@ func Help() {
 	fmt.Printf("  Process THINGs\n")
 	fmt.Printf("     tellmewhen -pid-exits=PID\n")
 	fmt.Printf("     tellmewhen -command-exits='CMD'\n")
-	fmt.Printf("     tellmewhen -command-exits='CMD' -with-status=NUM\n")
 	fmt.Printf("     tellmewhen -command-succeeds='CMD'\n")
 	fmt.Printf("     tellmewhen -command-fails='CMD'\n")
 	fmt.Printf("\n")
@@ -240,7 +379,7 @@ func (self Config) MakeWatcherCondition() (Condition, error) {
 	}
 
 	if self.FileUpdated != "" {
-		return FileChangedCondition{FileName: self.FileUpdated}, nil
+		return FileUpdatedCondition{FileName: self.FileUpdated}, nil
 	}
 
 	////////////////////////////////////////
@@ -254,7 +393,7 @@ func (self Config) MakeWatcherCondition() (Condition, error) {
 	}
 
 	if self.DirUpdated != "" {
-		return DirChangedCondition{DirName: self.DirUpdated}, nil
+		return DirUpdatedCondition{DirName: self.DirUpdated}, nil
 	}
 
 	////////////////////////////////////////
