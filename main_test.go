@@ -95,6 +95,7 @@ func SetupEnsureTestDirectoryDoesNotExist(t *testing.T) error {
 func TestWaitForFileToExist(t *testing.T) {
 	var err error
 	var condition Condition = FileExistsCondition{FileName: TEST_FILE_NAME}
+	ctx := &Context{}
 
 	err = SetupEnsureFileDoesNotExist(t, TEST_FILE_NAME)
 	if err != nil {
@@ -102,7 +103,7 @@ func TestWaitForFileToExist(t *testing.T) {
 	}
 
 	// now that the file doesn't exist, the check should be false
-	condition, res, err := condition.Check()
+	condition, res, err := condition.Check(ctx)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("TestWaitForFileToExist failed to check if file exists: TEST_FILE_NAME=%s, err=%v", TEST_FILE_NAME, err)
 	}
@@ -117,7 +118,7 @@ func TestWaitForFileToExist(t *testing.T) {
 	}
 
 	// now that the file exists, the check should be true
-	condition, res, err = condition.Check() // nolint: staticcheck
+	condition, res, err = condition.Check(ctx) // nolint: staticcheck
 	if err != nil {
 		t.Fatalf("TestWaitForFileToExist failed to check if file exists: TEST_FILE_NAME=%s, err=%v", TEST_FILE_NAME, err)
 	}
@@ -130,6 +131,7 @@ func TestWaitForFileToExist(t *testing.T) {
 func TestWaitForFileToNotExist(t *testing.T) {
 	var err error
 	var condition Condition
+	ctx := &Context{}
 	condition = FileRemovedCondition{FileName: TEST_FILE_NAME}
 	err = SetupEnsureFile(t, TEST_FILE_NAME, "some file contents")
 	if err != nil {
@@ -137,7 +139,7 @@ func TestWaitForFileToNotExist(t *testing.T) {
 	}
 
 	// should not exist
-	condition, res, err := condition.Check()
+	condition, res, err := condition.Check(ctx)
 	if err != nil {
 		t.Fatalf("Error: error executing FileRemovedCondition check: condition=%v; err=%v", condition, err)
 	}
@@ -151,7 +153,7 @@ func TestWaitForFileToNotExist(t *testing.T) {
 		t.Fatalf("Error: SetupEnsureFileDoesNotExist for TEST_FILE_NAME=%s; failed=%v", TEST_FILE_NAME, err)
 	}
 
-	condition, res, err = condition.Check()
+	condition, res, err = condition.Check(ctx)
 	if err != nil {
 		t.Fatalf("Error: error executing FileRemovedCondition check: condition=%v; err=%v", condition, err)
 	}
@@ -164,6 +166,7 @@ func TestWaitForFileToNotExist(t *testing.T) {
 func TestFileChanged(t *testing.T) {
 	var err error
 	var condition Condition
+	ctx := &Context{}
 	condition = FileUpdatedCondition{FileName: TEST_FILE_NAME}
 	err = SetupEnsureFile(t, TEST_FILE_NAME, "before change")
 	if err != nil {
@@ -177,12 +180,12 @@ func TestFileChanged(t *testing.T) {
 		t.Fatalf("Error: unable to set create and modification time of TEST_FILE_NAME=%s; err=%v", TEST_FILE_NAME, err)
 	}
 
-	condition, err = condition.Init()
+	condition, err = condition.Init(ctx)
 	if err != nil {
 		t.Fatalf("Error: error initializing check: condition=%v; err=%v", condition, err)
 	}
 
-	condition, res, err := condition.Check()
+	condition, res, err := condition.Check(ctx)
 	if err != nil {
 		t.Fatalf("Error: error executing FileUpdatedCondition check: condition=%v; err=%v", condition, err)
 	}
@@ -196,7 +199,7 @@ func TestFileChanged(t *testing.T) {
 		t.Fatalf("Error: unable to update the contents of file: TEST_FILE_NAME=%s; err=%v", TEST_FILE_NAME, err)
 	}
 
-	condition, res, err = condition.Check()
+	condition, res, err = condition.Check(ctx)
 	if err != nil {
 		t.Fatalf("Error: error executing FileUpdatedCondition check: condition=%v; err=%v", condition, err)
 	}
@@ -210,13 +213,14 @@ func TestFileChanged(t *testing.T) {
 func TestDirExistsCondition(t *testing.T) {
 	var err error
 	var condition Condition
+	ctx := &Context{}
 	condition = DirExistsCondition{DirName: TEST_DIR_NAME}
 	err = SetupEnsureTestDirectoryDoesNotExist(t)
 	if err != nil {
 		t.Fatalf("Error: unable to ensure dir=%s does not exist: err=%v", TEST_DIR_NAME, err)
 	}
 
-	condition, res, err := condition.Check()
+	condition, res, err := condition.Check(ctx)
 	if err != nil {
 		t.Fatalf("Error: failed to run condition.Check() err=%v", err)
 	}
@@ -230,7 +234,7 @@ func TestDirExistsCondition(t *testing.T) {
 		t.Fatalf("Error: unable to ensure dir=%s exists: err=%v", TEST_DIR_NAME, err)
 	}
 
-	condition, res, err = condition.Check() // nolint: staticcheck
+	condition, res, err = condition.Check(ctx)
 	if err != nil {
 		t.Fatalf("Error: failed to run condition.Check() err=%v", err)
 	}
@@ -243,13 +247,14 @@ func TestDirExistsCondition(t *testing.T) {
 func TestDirRemovedCondition(t *testing.T) {
 	var err error
 	var condition Condition
+	ctx := &Context{}
 	condition = DirRemovedCondition{DirName: TEST_DIR_NAME}
 	err = SetupEnsureTestDirectory(t)
 	if err != nil {
 		t.Fatalf("Error: unable to ensure dir=%s exists: err=%v", TEST_DIR_NAME, err)
 	}
 
-	condition, res, err := condition.Check()
+	condition, res, err := condition.Check(ctx)
 	if err != nil {
 		t.Fatalf("Error: failed to run condition.Check() err=%v", err)
 	}
@@ -263,7 +268,7 @@ func TestDirRemovedCondition(t *testing.T) {
 		t.Fatalf("Error: unable to ensure dir=%s does not exist: err=%v", TEST_DIR_NAME, err)
 	}
 
-	condition, res, err = condition.Check() // nolint: staticcheck
+	condition, res, err = condition.Check(ctx) // nolint: staticcheck
 	if err != nil {
 		t.Fatalf("Error: failed to run condition.Check() err=%v", err)
 	}
@@ -276,6 +281,7 @@ func TestDirRemovedCondition(t *testing.T) {
 func TestDirUpdatedCondition(t *testing.T) {
 	var err error
 	var condition Condition
+	ctx := &Context{}
 	condition = DirUpdatedCondition{DirName: TEST_DIR_NAME}
 	err = SetupEnsureTestDirectory(t)
 	if err != nil {
@@ -289,12 +295,12 @@ func TestDirUpdatedCondition(t *testing.T) {
 		t.Fatalf("Error: unable to set create and modification time of TEST_FILE_NAME=%s; err=%v", TEST_FILE_NAME, err)
 	}
 
-	condition, err = condition.Init()
+	condition, err = condition.Init(ctx)
 	if err != nil {
 		t.Fatalf("Error: failed init DirUpdatedCondition; err=%v", err)
 	}
 
-	condition, res, err := condition.Check()
+	condition, res, err := condition.Check(ctx)
 	if err != nil {
 		t.Fatalf("Error: failed to run condition.Check() err=%v", err)
 	}
@@ -308,7 +314,7 @@ func TestDirUpdatedCondition(t *testing.T) {
 		t.Fatalf("Error: failed to create file in TEST_DIR_NAME=%s; err=%v", TEST_DIR_NAME, err)
 	}
 
-	condition, res, err = condition.Check() // nolint: staticcheck
+	condition, res, err = condition.Check(ctx)
 	if err != nil {
 		t.Fatalf("Error: failed to run condition.Check() err=%v", err)
 	}
@@ -323,6 +329,7 @@ func TestPidExitedCondition(t *testing.T) {
 	var condition Condition
 	var sleep_cmd = "sleep"
 	var sleep_cmd_args = []string{"3600"}
+	ctx := &Context{}
 	cmd := exec.Command(sleep_cmd, sleep_cmd_args...)
 	err = cmd.Start()
 	if err != nil {
@@ -331,7 +338,7 @@ func TestPidExitedCondition(t *testing.T) {
 
 	condition = PidExitedCondition{Pid: cmd.Process.Pid}
 
-	condition, res, err := condition.Check()
+	condition, res, err := condition.Check(ctx)
 	if err != nil {
 		t.Fatalf("Error: failed to run condition.Check() err=%v", err)
 	}
@@ -355,7 +362,7 @@ func TestPidExitedCondition(t *testing.T) {
 		t.Fatalf("Error: error waiting (pinfo.Wait() on pid=%d; err=%v", cmd.Process.Pid, err)
 	}
 
-	condition, res, err = condition.Check() // nolint: staticcheck
+	condition, res, err = condition.Check(ctx)
 	if err != nil {
 		t.Fatalf("Error: failed to run condition.Check() err=%v", err)
 	}
@@ -370,6 +377,7 @@ func TestSocketConnectCondition(t *testing.T) {
 	var err error
 	var res bool
 	var condition Condition
+	ctx := &Context{}
 	// From: https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
 	//     585 tcp/udp - Previously assigned for use of Internet Message
 	//     Access Protocol over TLS/SSL (IMAPS), now deregistered in
@@ -377,7 +385,7 @@ func TestSocketConnectCondition(t *testing.T) {
 	address := "localhost:585"
 	condition = SocketConnectCondition{Address: address}
 
-	condition, res, err = condition.Check() // nolint: staticcheck
+	condition, res, err = condition.Check(ctx)
 	if err != nil {
 		t.Errorf("Error: expected address=%s to not have a listening process, NOTE: this test will fail if a process is listening on that port.", address)
 		t.Fatalf("Error: expected connection refused, got error: address=%s; err=%v", address, err)
@@ -396,7 +404,7 @@ func TestSocketConnectCondition(t *testing.T) {
 	port := listener.Addr().(*net.TCPAddr).Port
 	condition = SocketConnectCondition{Address: fmt.Sprintf("localhost:%d", port)}
 
-	condition, res, err = condition.Check() // nolint: staticcheck
+	condition, res, err = condition.Check(ctx)
 	if err != nil {
 		t.Fatalf("Error: expected connection refused, got error: address=%s; err=%v", address, err)
 	}
