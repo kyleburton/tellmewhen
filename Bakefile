@@ -18,7 +18,7 @@ bake_task run-tests "Run Test Suite"
 function run-tests () {
     test -d "./testing/tmp" || mkdir -p "./testing/tmp"
     go test -v
-
+    build
     bash ./scripts/run-integration-tests.sh
 }
 
